@@ -9,10 +9,16 @@
 
 #include "Instruction.h"
 
-// Predictor type
-#define TWO_BIT_LOCAL
-//#define TOURNAMENT
-//#define GSHARE
+// // You can play around with these settings.
+// #define localPredictorSize 2048
+// #define localCounterBits 2
+// #define localHistoryTableSize 4096 
+// #define globalPredictorSize 16384
+// #define globalCounterBits 2 
+// #define choicePredictorSize 16384 // Keep this the same as globalPredictorSize.
+// #define choiceCounterBits 2
+// #define gsharePredictorSize 2048
+// #define gshareCounterBits 2
 
 // saturating counter
 typedef struct Sat_Counter
@@ -22,16 +28,30 @@ typedef struct Sat_Counter
     uint8_t counter;
 }Sat_Counter;
 
+typedef struct BP_Config 
+{
+    unsigned local_predictor_size;
+    unsigned local_history_table_size;
+    unsigned local_counter_bits;
+ 
+    unsigned global_predictor_size;
+    unsigned global_counter_bits;    
+    
+    unsigned choice_predictor_size;
+    unsigned choice_counter_bits;
+    
+    unsigned gshare_predictor_size;
+    unsigned gshare_counter_bits;
+
+    char* bp_type;
+}BP_Config;
+
 typedef struct Branch_Predictor
 {
-    #ifdef TWO_BIT_LOCAL
+
     unsigned local_predictor_sets; // Number of entries in a local predictor
     unsigned index_mask;
 
-    Sat_Counter *local_counters;
-    #endif
-
-    #ifdef TOURNAMENT
     unsigned local_predictor_size;
     unsigned local_predictor_mask;
     Sat_Counter *local_counters;
@@ -49,20 +69,17 @@ typedef struct Branch_Predictor
     Sat_Counter *choice_counters;
 
     uint64_t global_history;
-    unsigned history_register_mask;
-    #endif
 
-    #ifdef GSHARE
     unsigned gshare_predictor_size;
     unsigned gshare_predictor_mask;
     Sat_Counter *gshare_counters;
     uint64_t gshare_history;
     unsigned history_register_mask;
-    #endif
+
 }Branch_Predictor;
 
 // Initialization function
-Branch_Predictor *initBranchPredictor();
+Branch_Predictor *initBranchPredictor(BP_Config *config);
 
 // Counter functions
 void initSatCounter(Sat_Counter *sat_counter, unsigned counter_bits);
@@ -70,7 +87,7 @@ void incrementCounter(Sat_Counter *sat_counter);
 void decrementCounter(Sat_Counter *sat_counter);
 
 // Branch predictor functions
-bool predict(Branch_Predictor *branch_predictor, Instruction *instr);
+bool predict(Branch_Predictor *branch_predictor, Instruction *instr, BP_Config *config);
 
 unsigned getIndex(uint64_t branch_addr, unsigned index_mask);
 bool getPrediction(Sat_Counter *sat_counter);
