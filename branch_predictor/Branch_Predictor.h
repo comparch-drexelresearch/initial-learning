@@ -9,17 +9,6 @@
 
 #include "Instruction.h"
 
-// // You can play around with these settings.
-// #define localPredictorSize 2048
-// #define localCounterBits 2
-// #define localHistoryTableSize 4096 
-// #define globalPredictorSize 16384
-// #define globalCounterBits 2 
-// #define choicePredictorSize 16384 // Keep this the same as globalPredictorSize.
-// #define choiceCounterBits 2
-// #define gsharePredictorSize 2048
-// #define gshareCounterBits 2
-
 // saturating counter
 typedef struct Sat_Counter
 {

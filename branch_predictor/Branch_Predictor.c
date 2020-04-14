@@ -3,18 +3,6 @@
 
 const unsigned instShiftAmt = 2; // Number of bits to shift a PC by
 
-// // You can play around with these settings.
-// const unsigned localPredictorSize = 2048;
-// const unsigned localCounterBits = 2;
-// const unsigned localHistoryTableSize = 4096; 
-// const unsigned globalPredictorSize = 16384;
-// const unsigned globalCounterBits = 2; 
-// const unsigned choicePredictorSize = 16384; // Keep this the same as globalPredictorSize.
-// const unsigned choiceCounterBits = 2;
-// const unsigned gsharePredictorSize = 2048;
-// const unsigned gshareCounterBits = 2;
-
-
 
 Branch_Predictor *initBranchPredictor(BP_Config *config)
 {
@@ -169,7 +157,6 @@ bool predict(Branch_Predictor *branch_predictor, Instruction *instr, BP_Config *
 
     else if (!strcmp(config->bp_type, "gshare")) {
         //step 1, get global prediction
-        //unsigned PC_index = getIndex(branch_address, branch_predictor->gshare_predictor_mask);
         unsigned PC_index = (branch_address >> ((int)(64 - log2(branch_predictor->gshare_predictor_size))));
         unsigned gshare_predictor_idx = 
             (branch_predictor->gshare_history ^ PC_index) & branch_predictor->gshare_predictor_mask;

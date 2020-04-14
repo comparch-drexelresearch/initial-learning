@@ -67,11 +67,10 @@ int main(int argc, const char *argv[])
     tournament_table->choice_predictor_size = cps_arr;
 
     BP_TABLE *bp_tables[] = { twobitlocal_table, tournament_table, gshare_table };
-    //BP_TABLE *bp_tables[] = { gshare_table };
 
     int num_tables = (int)( sizeof(bp_tables) / sizeof(bp_tables[0]) );
 
-
+    printf("Trace file used, %s\n\n", argv[1]);
 
     for (int t = 0; t < num_tables; t++ ) {
         config.bp_type = bp_tables[t]->name;
