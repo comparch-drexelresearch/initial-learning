@@ -1,6 +1,11 @@
 #include "Branch_Predictor.h"
 #include <string.h>
 
+// The traces we are using, x86-based, variable-length
+// RISC architecture: risc-v/arm, 4 bytes offset
+// CICS architecture, variable offset
+// instShiftAmt, experimental number
+// branch_adddr >> instShiftAmt, 
 const unsigned instShiftAmt = 2; // Number of bits to shift a PC by
 
 
@@ -157,7 +162,8 @@ bool predict(Branch_Predictor *branch_predictor, Instruction *instr, BP_Config *
 
     else if (!strcmp(config->bp_type, "gshare")) {
         //step 1, get global prediction
-        unsigned PC_index = (branch_address >> ((int)(64 - log2(branch_predictor->gshare_predictor_size))));
+        // unsigned PC_index = (branch_address >> ((int)(64 - log2(branch_predictor->gshare_predictor_size))));
+        uint64_t PC_index = branch_address >> instShiftAmt;
         unsigned gshare_predictor_idx = 
             (branch_predictor->gshare_history ^ PC_index) & branch_predictor->gshare_predictor_mask;
 
