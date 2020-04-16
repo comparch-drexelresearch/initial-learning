@@ -27,12 +27,14 @@ Branch_Predictor *initBranchPredictor(BP_Config *config)
         for (i; i < branch_predictor->local_predictor_sets; i++) {
             initSatCounter(&(branch_predictor->local_counters[i]), config->local_counter_bits);
         }
+
     } else if (!strcmp(config->bp_type, "gshare")) {
         assert(checkPowerofTwo(config->gshare_predictor_size));
         branch_predictor->gshare_predictor_size = config->gshare_predictor_size;
 
         branch_predictor->gshare_counters = 
             (Sat_Counter *)malloc(config->gshare_predictor_size *sizeof(Sat_Counter));
+        
         for ( int i=0; i < config->gshare_predictor_size; i++) {
             initSatCounter(&(branch_predictor->gshare_counters[i]), config->gshare_counter_bits);
         }
@@ -40,7 +42,24 @@ Branch_Predictor *initBranchPredictor(BP_Config *config)
         branch_predictor->gshare_history = 0;
         branch_predictor->gshare_predictor_mask = config->gshare_predictor_size - 1;
 
-    }     else if (!strcmp(config->bp_type, "tournament")) {
+    } else if (!strcmp(config->bp_type, "perceptron")) {
+
+        assert(checkPowerofTwo(config->perceptron_table_size));
+        unsigned weight_bits = ceil((1 + log2(1.93*config->global_history_bits + 14)));
+
+        branch_predictor->threshold = ceil(1.93*config->global_history_bits + 14); 
+        branch_predictor->perceptron_table_size = config->perceptron_table_size;
+        if ((branch_predictor->perceptron_table = (Perceptron *)malloc(config->perceptron_table_size*sizeof(Perceptron))) == NULL) {
+            printf("Malloc failed!");
+        };
+        
+        for (int i=0; i<config->perceptron_table_size; i++) {
+            initPerceptron(&(branch_predictor->perceptron_table[i]), weight_bits, config->global_history_bits);
+        }
+        branch_predictor->global_history = 0;
+        branch_predictor->global_history_mask = (1 << config->global_history_bits) - 1;
+
+    } else if (!strcmp(config->bp_type, "tournament")) {
         assert(checkPowerofTwo(config->local_predictor_size));
         assert(checkPowerofTwo(config->local_history_table_size));
         assert(checkPowerofTwo(config->global_predictor_size));
@@ -105,6 +124,14 @@ Branch_Predictor *initBranchPredictor(BP_Config *config)
     }
 
     return branch_predictor;
+}
+
+inline void initPerceptron(Perceptron *perceptron, unsigned weight_bits, unsigned num_weights) {
+    perceptron->weights = (signed *)malloc(num_weights *sizeof(signed int));
+    for (int i=0; i< num_weights; i++) {
+        perceptron->weights[i]=0;
+    }
+    perceptron->weight_bits = weight_bits;
 }
 
 // sat counter functions
@@ -184,9 +211,40 @@ bool predict(Branch_Predictor *branch_predictor, Instruction *instr, BP_Config *
         branch_predictor->gshare_history = branch_predictor->gshare_history << 1 | instr->taken;
         
         return prediction_correct;
+
+    } else if (!strcmp(config->bp_type, "perceptron")) {
+        unsigned perceptron_table_idx = getIndex(branch_address, 
+            branch_predictor->perceptron_table_size - 1);
+        
+        signed output = dotProduct(
+            branch_predictor->perceptron_table[perceptron_table_idx].weights, 
+            branch_predictor->global_history, config->global_history_bits);
+
+        bool prediction;
+        signed xi;        
+        
+        if (output > 0) {
+            prediction = 1; 
+            xi = 1;
+        } else {
+            prediction = 0; 
+            xi = -1;
+        }
+        
+        bool prediction_correct = prediction == instr->taken;
+        signed t; //t is actual outcome of branch, t is 1 when taken and -1 when not taken
+        if (instr->taken) { t = 1; } else { t = -1;}
+        
+        if ((instr->taken ^ prediction) || (abs(output) <= branch_predictor->threshold)) {
+            for (int i=0; i < config->global_history_bits; i++) {
+                branch_predictor->perceptron_table[perceptron_table_idx].weights[i] += t*xi;
+            }
+        }
+
+        branch_predictor->gshare_history = branch_predictor->gshare_history << 1 | instr->taken;
+
+        return prediction_correct;
     }
-
-
     else if (!strcmp(config->bp_type, "tournament")) {
         // Step one, get local prediction.
         unsigned local_history_table_idx = getIndex(branch_address,
@@ -273,6 +331,17 @@ inline bool getPrediction(Sat_Counter *sat_counter)
 
     // MSB determins the direction
     return (counter >> (counter_bits - 1));
+}
+
+inline signed dotProduct(signed *weights, unsigned global_history_register, unsigned global_history_bits)
+{
+    signed dot_product = 0;
+    signed input = 0;
+    for (int i=0; i < global_history_bits; i++) {
+        input = (global_history_register >> i) & 1;
+        dot_product = dot_product + weights[i]*input;
+    }
+    return dot_product;
 }
 
 int checkPowerofTwo(unsigned x)

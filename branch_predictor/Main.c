@@ -15,6 +15,8 @@ typedef struct BP_TABLE {
     unsigned* local_history_table_size;
     unsigned* global_predictor_size;
     unsigned* choice_predictor_size;
+    unsigned* perceptron_table_size;
+    unsigned* global_history_bits;
     char* name;
 }BP_TABLE;
 
@@ -31,13 +33,19 @@ int main(int argc, const char *argv[])
         .bp_type = "",
         .local_predictor_size = 2048,
         .local_history_table_size = 2048,
-        .global_predictor_size = 8192,
-        .choice_predictor_size = 8192,
-        .gshare_predictor_size = 2048,
-        .gshare_counter_bits = 2,
         .local_counter_bits = 2,
+
+        .global_predictor_size = 8192,
         .global_counter_bits = 2,
-        .choice_counter_bits = 2
+
+        .choice_counter_bits = 2,
+        .choice_predictor_size = 8192,
+
+        .gshare_predictor_size = 2048,       
+        .gshare_counter_bits = 2,
+
+        .perceptron_table_size = 2048,
+        .global_history_bits = 12,        
     };
 
     BP_TABLE *twobitlocal_table = malloc(sizeof(BP_TABLE));
@@ -65,8 +73,18 @@ int main(int argc, const char *argv[])
     tournament_table->local_history_table_size = lhts_arr;
     tournament_table->global_predictor_size = gps_arr;
     tournament_table->choice_predictor_size = cps_arr;
+    
+    BP_TABLE *perceptron_table = malloc(sizeof(BP_TABLE));
+    perceptron_table->row = 18;
+    perceptron_table->name = "perceptron";
+    unsigned pts_arr[] = {2048, 2048, 2048, 4096, 4096, 4096, 8192, 8192, 8192, 16384, 16384, 16384, 32768, 
+                            32768, 32768, 65536, 65536, 65536};
+    unsigned ghb_arr[] = {12, 45, 62, 12, 45, 62, 12, 45, 62, 12, 45, 62, 12, 45, 62, 12, 45, 62};
+    perceptron_table->perceptron_table_size = pts_arr;
+    perceptron_table->global_history_bits = ghb_arr;
 
-    BP_TABLE *bp_tables[] = { twobitlocal_table, tournament_table, gshare_table };
+//    BP_TABLE *bp_tables[] = { twobitlocal_table, tournament_table, gshare_table };
+    BP_TABLE *bp_tables[] = {perceptron_table};
 
     int num_tables = (int)( sizeof(bp_tables) / sizeof(bp_tables[0]) );
 
@@ -84,14 +102,19 @@ int main(int argc, const char *argv[])
                 config.local_history_table_size = bp_tables[t]->local_history_table_size[r];
                 config.global_predictor_size = bp_tables[t]->global_predictor_size[r];
                 config.choice_predictor_size = bp_tables[t]->choice_predictor_size[r];
-                printf("%s, %u, %u, %u, ", config.bp_type, config.local_history_table_size, config.global_predictor_size, config.choice_predictor_size);
+                printf("%s, %u, %u, %u, ", config.bp_type, config.local_history_table_size, 
+                        config.global_predictor_size, config.choice_predictor_size);
             }
             else if (!strcmp(bp_tables[t]->name, "gshare")) {
                 config.gshare_predictor_size = bp_tables[t]->global_predictor_size[r];
                 config.gshare_counter_bits = bp_tables[t]->global_counter_bits[r];
                 printf("%s, %u, %u, ", config.bp_type, config.gshare_predictor_size, config.gshare_counter_bits);
+            } 
+            else if (!strcmp(bp_tables[t]->name, "perceptron")) {
+                config.perceptron_table_size = bp_tables[t]->perceptron_table_size[r];
+                config.global_history_bits = bp_tables[t]->global_history_bits[r];
+                printf("%s, %u, %u, ", config.bp_type, config.perceptron_table_size, config.global_history_bits);
             }
-
 
             // Initialize a CPU trace parser
             TraceParser *cpu_trace = initTraceParser(argv[1]);
@@ -131,6 +154,11 @@ int main(int argc, const char *argv[])
 
             float performance = (float)num_of_correct_predictions / (float)num_of_branches * 100;
             printf("%"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64", %f%%\n", num_of_instructions, num_of_branches, num_of_correct_predictions, num_of_incorrect_predictions, performance);
+            free(branch_predictor->local_counters);
+            free(branch_predictor->gshare_counters);
+            free(branch_predictor->gshare_counters);
+            free(branch_predictor->perceptron_table);
+            free(branch_predictor);
         }
         printf("\n----------------------------------\n");
     }

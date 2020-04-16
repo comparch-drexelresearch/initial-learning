@@ -17,6 +17,13 @@ typedef struct Sat_Counter
     uint8_t counter;
 }Sat_Counter;
 
+typedef struct Perceptron
+{
+    signed *weights;
+    unsigned weight_bits;
+
+} Perceptron;
+
 typedef struct BP_Config 
 {
     unsigned local_predictor_size;
@@ -32,6 +39,8 @@ typedef struct BP_Config
     unsigned gshare_predictor_size;
     unsigned gshare_counter_bits;
 
+    unsigned perceptron_table_size;
+    unsigned global_history_bits;
     char* bp_type;
 }BP_Config;
 
@@ -65,6 +74,10 @@ typedef struct Branch_Predictor
     uint64_t gshare_history;
     unsigned history_register_mask;
 
+    unsigned perceptron_table_size;
+    Perceptron *perceptron_table;
+    unsigned threshold;
+
 }Branch_Predictor;
 
 // Initialization function
@@ -75,6 +88,10 @@ void initSatCounter(Sat_Counter *sat_counter, unsigned counter_bits);
 void incrementCounter(Sat_Counter *sat_counter);
 void decrementCounter(Sat_Counter *sat_counter);
 
+// Perceptron functions
+void initPerceptron(Perceptron *perceptron, unsigned weight_bits, unsigned num_weights); 
+
+
 // Branch predictor functions
 bool predict(Branch_Predictor *branch_predictor, Instruction *instr, BP_Config *config);
 
@@ -83,5 +100,5 @@ bool getPrediction(Sat_Counter *sat_counter);
 
 // Utility
 int checkPowerofTwo(unsigned x);
-
+signed dotProduct(signed *weights, unsigned global_history_register, unsigned global_history_bits);
 #endif
