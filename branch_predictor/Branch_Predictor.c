@@ -56,7 +56,7 @@ Branch_Predictor *initBranchPredictor(BP_Config *config)
         for (int i=0; i<config->perceptron_table_size; i++) {
             initPerceptron(&(branch_predictor->perceptron_table[i]), weight_bits, config->global_history_bits);
         }
-        branch_predictor->global_history = 0;
+        branch_predictor->global_history = 0; 
         branch_predictor->global_history_mask = (1 << config->global_history_bits) - 1;
 
     } else if (!strcmp(config->bp_type, "tournament")) {
@@ -128,7 +128,8 @@ Branch_Predictor *initBranchPredictor(BP_Config *config)
 
 inline void initPerceptron(Perceptron *perceptron, unsigned weight_bits, unsigned num_weights) {
     perceptron->weights = (signed *)malloc(num_weights *sizeof(signed int));
-    for (int i=0; i< num_weights; i++) {
+    perceptron->weights[0]=1;
+    for (int i=1; i< num_weights; i++) {
         perceptron->weights[i]=0;
     }
     perceptron->weight_bits = weight_bits;
@@ -223,7 +224,7 @@ bool predict(Branch_Predictor *branch_predictor, Instruction *instr, BP_Config *
         bool prediction;
         signed xi;        
         
-        if (output > 0) {
+        if (output >= 0) {
             prediction = 1; 
             xi = 1;
         } else {
@@ -237,11 +238,11 @@ bool predict(Branch_Predictor *branch_predictor, Instruction *instr, BP_Config *
         
         if ((instr->taken ^ prediction) || (abs(output) <= branch_predictor->threshold)) {
             for (int i=0; i < config->global_history_bits; i++) {
-                branch_predictor->perceptron_table[perceptron_table_idx].weights[i] += t*xi;
+                branch_predictor->perceptron_table[perceptron_table_idx].weights[i] = branch_predictor->perceptron_table[perceptron_table_idx].weights[i] + t*xi;
             }
         }
 
-        branch_predictor->gshare_history = branch_predictor->gshare_history << 1 | instr->taken;
+        branch_predictor->global_history = branch_predictor->global_history << 1 | instr->taken;
 
         return prediction_correct;
     }
@@ -337,11 +338,11 @@ inline signed dotProduct(signed *weights, unsigned global_history_register, unsi
 {
     signed dot_product = 0;
     signed input = 0;
-    for (int i=0; i < global_history_bits; i++) {
+    for (int i=1; i < global_history_bits; i++) {
         input = (global_history_register >> i) & 1;
         dot_product = dot_product + weights[i]*input;
     }
-    return dot_product;
+    return dot_product + weights[0] * 1; // bias weight gets input =1
 }
 
 int checkPowerofTwo(unsigned x)
