@@ -1,6 +1,6 @@
 #!/bin/bash
 # Script to run brnch predictors with many AI workloads
 
-./Main ../cpu_traces/548.exchange2_r_branches.cpu_trace > performance
-./Main ../cpu_traces/531.deepsjeng_r_branches.cpu_trace >> performance
-./Main ../cpu_traces/541.leela_r_branches.cpu_trace >> performance
+./Main ../cpu_traces/548.exchange2_r_branches.cpu_trace > performance_perceptron
+./Main ../cpu_traces/531.deepsjeng_r_branches.cpu_trace >> performance_perceptron
+./Main ../cpu_traces/541.leela_r_branches.cpu_trace >> performance_perceptron

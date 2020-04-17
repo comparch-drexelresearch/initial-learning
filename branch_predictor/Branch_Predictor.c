@@ -222,24 +222,20 @@ bool predict(Branch_Predictor *branch_predictor, Instruction *instr, BP_Config *
             branch_predictor->global_history, config->global_history_bits);
 
         bool prediction;
-        signed xi;        
         
         if (output >= 0) {
             prediction = 1; 
-            xi = 1;
         } else {
             prediction = 0; 
-            xi = -1;
         }
         
         bool prediction_correct = prediction == instr->taken;
         signed t; //t is actual outcome of branch, t is 1 when taken and -1 when not taken
-        if (instr->taken) { t = 1; } else { t = -1;}
+        if (instr->taken) { t = 1;} else { t = -1;}
         
+        //train 
         if ((instr->taken ^ prediction) || (abs(output) <= branch_predictor->threshold)) {
-            for (int i=0; i < config->global_history_bits; i++) {
-                branch_predictor->perceptron_table[perceptron_table_idx].weights[i] = branch_predictor->perceptron_table[perceptron_table_idx].weights[i] + t*xi;
-            }
+            updatePerceptronWeight(&(branch_predictor->perceptron_table[perceptron_table_idx]), branch_predictor->global_history, config->global_history_bits, t);
         }
 
         branch_predictor->global_history = branch_predictor->global_history << 1 | instr->taken;
@@ -334,12 +330,30 @@ inline bool getPrediction(Sat_Counter *sat_counter)
     return (counter >> (counter_bits - 1));
 }
 
+inline void updatePerceptronWeight(Perceptron *p, unsigned global_history_register, unsigned num_weights, signed t) {    
+    signed xi = 1;
+    unsigned ghr_nextbit=0;
+    p->weights[0] = p->weights[0] + t; //Learns the bias of the branch
+    for (int i=1; i < num_weights; i++) {
+        ghr_nextbit = (global_history_register >>i) & 1;
+        if (ghr_nextbit == 0) {xi = -1; } else {xi = 1;}
+        p->weights[i] = p->weights[i] + t*xi;
+    }
+    return; 
+}
+
 inline signed dotProduct(signed *weights, unsigned global_history_register, unsigned global_history_bits)
 {
     signed dot_product = 0;
-    signed input = 0;
+    signed input = 1;
+    unsigned ghr_nextbit = 1;
     for (int i=1; i < global_history_bits; i++) {
-        input = (global_history_register >> i) & 1;
+        ghr_nextbit = (global_history_register >> i) & 1;
+        if (ghr_nextbit == 0){
+            input = -1;
+        } else {
+            input = 1;
+        }
         dot_product = dot_product + weights[i]*input;
     }
     return dot_product + weights[0] * 1; // bias weight gets input =1

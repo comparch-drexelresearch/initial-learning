@@ -90,7 +90,7 @@ void decrementCounter(Sat_Counter *sat_counter);
 
 // Perceptron functions
 void initPerceptron(Perceptron *perceptron, unsigned weight_bits, unsigned num_weights); 
-
+void updatePerceptronWeight(Perceptron *p, unsigned global_history_register, unsigned num_weights, signed t);
 
 // Branch predictor functions
 bool predict(Branch_Predictor *branch_predictor, Instruction *instr, BP_Config *config);
