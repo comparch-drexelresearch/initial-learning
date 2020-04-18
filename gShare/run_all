@@ -1,0 +1,5 @@
+#!/bin/bash
+
+./Main 531.deepsjeng_r_branches.cpu_trace >> performance
+./Main 541.leela_r_branches.cpu_trace >> performance
+./Main 548.exchange2_r_branches.cpu_trace >> performance
