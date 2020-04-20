@@ -4,15 +4,6 @@ const unsigned instShiftAmt = 2; // Number of bits to shift a PC by
 
 Branch_Predictor *initBranchPredictor(predictor_args *config)
 {
-    // You can play around with these settings.
-    // unsigned localPredictorSize = 2048;
-    // unsigned localCounterBits = 2;
-    // unsigned localHistoryTableSize = 2048; 
-    // unsigned globalPredictorSize = 8192 ;
-    // unsigned globalCounterBits = 2;
-    // unsigned choicePredictorSize = 8192; // Keep this the same as globalPredictorSize.
-    // unsigned choiceCounterBits = 2;
-
     Branch_Predictor *branch_predictor = (Branch_Predictor *)malloc(sizeof(Branch_Predictor));
 
     if (!strcmp(config->predictor_type, "two_bit_local")) {
@@ -98,6 +89,7 @@ Branch_Predictor *initBranchPredictor(predictor_args *config)
         assert(checkPowerofTwo(config->global_predictor_size));
         branch_predictor->global_predictor_size = config->global_predictor_size;
 
+        // Initialize global counter
         branch_predictor->global_counters = 
             (Sat_Counter *)malloc(config->global_predictor_size * sizeof(Sat_Counter));
 

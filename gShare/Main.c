@@ -29,9 +29,6 @@ int main(int argc, const char *argv[])
     // Print the testing file's name 
     printf("Testing on file: %s\n", argv[1]);
 
-    // Appending new data to performance log
-    // FILE *performance = fopen("performance", "a+");
-
     predictor_args config = (predictor_args) {
         .local_predictor_size = 2048,
         .local_history_table_size = 2048,
@@ -43,6 +40,7 @@ int main(int argc, const char *argv[])
         .predictor_type = ""
     };
 
+    // Argument of configurations of two-bit local predictor
     args_table *two_bit_local_table = malloc(sizeof(args_table));
     unsigned local_predictor_size_array[] = {2048, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288};
     unsigned local_counter_bits_array[] = {1, 2, 2, 2, 2, 2, 2, 2, 2, 2};
@@ -51,6 +49,7 @@ int main(int argc, const char *argv[])
     two_bit_local_table->local_predictor_size = local_predictor_size_array;
     two_bit_local_table->local_counter_bits = local_counter_bits_array;
 
+    // Argument of configurations of tournament predictor
     args_table *tournament_table = malloc(sizeof(args_table));
     unsigned local_histtable_size_array[] = {2048, 4096, 4096, 8192, 16384, 32768, 65536};
     unsigned global_predictor_size_array[] = {8192, 8192, 16384, 32768, 65536, 131072, 262144};
@@ -61,6 +60,7 @@ int main(int argc, const char *argv[])
     tournament_table->global_predictor_size = global_predictor_size_array;
     tournament_table->choice_predictor_size = choice_predictor_size_array;
 
+    // Argument of configurations of gshare predictor
     args_table *gshare_table = malloc(sizeof(args_table));
     unsigned gshare_global_predictor_size_array[] = {2048, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288};
     unsigned global_counter_bits_array[] = {1, 2, 2, 2, 2, 2, 2, 2, 2, 2};
@@ -75,6 +75,8 @@ int main(int argc, const char *argv[])
     for (int i = 0; i<num_table; i++) {
         config.predictor_type = argument_tables[i]->predictor_type;
         for (int j = 0; j<argument_tables[i]->num_row; j++) {
+
+            // Fetch argument values to predictor's configuration structure
             if (!strcmp(config.predictor_type, "two_bit_local")) {
                 config.local_predictor_size = argument_tables[i]->local_predictor_size[j];
                 config.local_counter_bits = argument_tables[i]->local_counter_bits[j];

@@ -23,6 +23,8 @@ typedef struct Sat_Counter
     uint8_t counter;
 }Sat_Counter;
 
+// One set of arguments for all type of predictors in this simulator
+// A specific predictor may not use all these values
 typedef struct predictor_args {
     unsigned local_predictor_size;
     unsigned local_history_table_size;
@@ -35,6 +37,7 @@ typedef struct predictor_args {
     char *predictor_type;
 }predictor_args;
 
+// Table to keep track of all configurations for all types of predictor
 typedef struct args_table {
     int num_row;
 
@@ -51,14 +54,6 @@ typedef struct args_table {
 
 typedef struct Branch_Predictor
 {
-    // #ifdef TWO_BIT_LOCAL
-    // unsigned local_predictor_sets; // Number of entries in a local predictor
-    // unsigned local_predictor_mask;
-
-    // Sat_Counter *local_counters;
-    // #endif
-
-    // #ifdef TOURNAMENT
     unsigned local_predictor_size;
     unsigned local_predictor_mask;
     Sat_Counter *local_counters;
@@ -77,15 +72,6 @@ typedef struct Branch_Predictor
 
     uint64_t global_history;
     unsigned history_register_mask;
-    // #endif
-
-    // #ifdef G_SHARE
-    // unsigned global_predictor_size;
-    // unsigned global_history_mask;
-    // Sat_Counter *global_counters;
-
-    // uint64_t global_history;
-    // #endif
 }Branch_Predictor;
 
 // Initialization function
