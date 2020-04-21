@@ -74,6 +74,7 @@ int main(int argc, const char *argv[])
 
     for (int i = 0; i<num_table; i++) {
         config.predictor_type = argument_tables[i]->predictor_type;
+        printf("___________________________________________________________\n");
         for (int j = 0; j<argument_tables[i]->num_row; j++) {
 
             // Fetch argument values to predictor's configuration structure
@@ -134,7 +135,5 @@ int main(int argc, const char *argv[])
                                                 num_of_correct_predictions, num_of_incorrect_predictions, performance);
         }
     }
-
-    printf("__________________________________________________________\n");
-
+    printf("---------------------------------------------------------------------------\n");
 }

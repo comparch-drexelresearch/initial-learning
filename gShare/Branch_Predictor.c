@@ -1,5 +1,6 @@
 #include "Branch_Predictor.h"
 
+// Branch Address = PC / 4
 const unsigned instShiftAmt = 2; // Number of bits to shift a PC by
 
 Branch_Predictor *initBranchPredictor(predictor_args *config)
