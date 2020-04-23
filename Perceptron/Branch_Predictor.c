@@ -124,11 +124,8 @@ inline signed get_dot_product(signed *weights, signed *global_history, unsigned 
 }
 
 inline void train_perceptron(Perceptron *perceptron, signed *global_history, unsigned history_length, signed result) {
-    signed sum = perceptron->weights[0] + result;
-    if (abs(sum) < perceptron->max_val) {
-        perceptron->weights[0] = sum;
-    }
-    for (int i = 1; i < history_length; i++) {
+    signed sum;
+    for (int i = 0; i < history_length; i++) {
         sum = perceptron->weights[i] + result * global_history[i];
         if (abs(sum) < perceptron->max_val) {
             perceptron->weights[i] = sum;
