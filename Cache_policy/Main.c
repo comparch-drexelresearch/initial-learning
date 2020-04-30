@@ -4,9 +4,21 @@
 extern TraceParser *initTraceParser(const char * mem_file);
 extern bool getRequest(TraceParser *mem_trace);
 
-extern Cache* initCache();
-extern bool accessBlock(Cache *cache, Request *req, uint64_t access_time);
-extern bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_addr);
+extern Cache* initCache(CP_Config *config);
+extern bool accessBlock(Cache *cache, Request *req, uint64_t access_time, CP_Config *config);
+extern bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_addr, CP_Config *config);
+
+typedef struct CP_TABLE {
+    int row;
+    unsigned* block_size; // Size of a cache line (in Bytes), try 64
+    // TODO, you should try different size of cache, for example, 128KB, 256KB, 512KB, 1MB, 2MB
+    unsigned* cache_size; // Size of a cache (in KB), initially 256
+    // TODO, you should try different association configurations, for example 4, 8, 16
+    unsigned* assoc; // initially 4
+    char* name;
+ }CP_TABLE;
+
+
 
 int main(int argc, const char *argv[])
 {	
@@ -17,45 +29,103 @@ int main(int argc, const char *argv[])
         return 0;
     }
 
-    // Initialize a CPU trace parser
-    TraceParser *mem_trace = initTraceParser(argv[1]);
+    CP_Config config = (CP_Config) {
+        .block_size = 64, // Size of a cache line (in Bytes), try 64
+    // TODO, you should try different size of cache, for example, 128KB, 256KB, 512KB, 1MB, 2MB
+        .cache_size = 256, // Size of a cache (in KB), initially 256
+    // TODO, you should try different association configurations, for example 4, 8, 16
+        .assoc = 4, // initially 4
+        .cp_type = "",
+    };
 
-    // Initialize a Cache
-    Cache *cache = initCache();
-    
-    // Running the trace
-    uint64_t num_of_reqs = 0;
-    uint64_t hits = 0;
-    uint64_t misses = 0;
-    uint64_t num_evicts = 0;
+    CP_TABLE *lru_table = malloc(sizeof(CP_TABLE));
+    lru_table->row = 30;
+    lru_table->name = "LRU";
+    unsigned bst_arr[] = {
+                        64, 64, 64, 64, 64, 
+                        64, 64, 64, 64, 64, 
+                        64, 64, 64, 64, 64,  
+                        64, 64, 64, 64, 64,
+                        64, 64, 64, 64, 64,  
+                        64, 64, 64, 64, 64};
+                        
+    unsigned cs_arr[] = {
+                        128, 128, 128, 128, 128, 
+                        256, 256, 256, 256, 256, 
+                        512, 512, 512, 512, 512,
+                        1024, 1024, 1024, 1024, 1024,
+                        2048, 2048, 2048, 2048, 2048,
+                        4096, 4096, 4096, 4096, 4096 };
 
-    uint64_t cycles = 0;
-    while (getRequest(mem_trace))
-    {
-        // Step one, accessBlock()
-        if (accessBlock(cache, mem_trace->cur_req, cycles))
-        {
-            // Cache hit
-            hits++;
-        }
-        else
-        {
-            // Cache miss!
-            misses++;
-            // Step two, insertBlock()
-//            printf("Inserting: %"PRIu64"\n", mem_trace->cur_req->load_or_store_addr);
-            uint64_t wb_addr;
-            if (insertBlock(cache, mem_trace->cur_req, cycles, &wb_addr))
-            {
-                num_evicts++;
-//                printf("Evicted: %"PRIu64"\n", wb_addr);
+    unsigned assoc_arr[]  = {
+                            2, 4, 8, 16, 32,
+                            2, 4, 8, 16, 32,
+                            2, 4, 8, 16, 32,
+                            2, 4, 8, 16, 32,
+                            2, 4, 8, 16, 32,
+                            2, 4, 8, 16, 32 };
+
+    lru_table->block_size = bst_arr;
+    lru_table->assoc = assoc_arr;
+    lru_table->cache_size = cs_arr;
+
+    CP_TABLE *cp_tables[] = {lru_table};
+    int num_tables =(int) ( sizeof(cp_tables) / sizeof(cp_tables[0]));
+    printf("Trace file used: %s\n\n", argv[1]);
+
+    for (int t = 0; t < num_tables; t++) {
+        config.cp_type = cp_tables[t]->name;
+        for( int r = 0; r < cp_tables[t]->row; r++) {
+            if (!strcmp(cp_tables[t]->name, "LRU")) {
+                config.block_size = cp_tables[t]->block_size[r];
+                config.assoc = cp_tables[t]->assoc[r];
+                config.cache_size = cp_tables[t]->cache_size[r];
+                printf("%s, %u, %3u, %5u, ", config.cp_type, config.block_size, config.assoc, config.cache_size);
             }
+            // Initialize a CPU trace parser
+            TraceParser *mem_trace = initTraceParser(argv[1]);
+
+            // Initialize a Cache
+            Cache *cache = initCache(&config);
+            
+            // Running the trace
+            uint64_t num_of_reqs = 0;
+            uint64_t hits = 0;
+            uint64_t misses = 0;
+            uint64_t num_evicts = 0;
+
+            uint64_t cycles = 0;
+            while (getRequest(mem_trace))
+            {
+                // Step one, accessBlock()
+                if (accessBlock(cache, mem_trace->cur_req, cycles, &config))
+                {
+                    // Cache hit
+                    hits++;
+                }
+                else
+                {
+                    // Cache miss!
+                    misses++;
+                    // Step two, insertBlock()
+                    //  printf("Inserting: %"PRIu64"\n", mem_trace->cur_req->load_or_store_addr);
+                    uint64_t wb_addr;
+                    if (insertBlock(cache, mem_trace->cur_req, cycles, &wb_addr, &config))
+                    {
+                        num_evicts++;
+                    //printf("Evicted: %"PRIu64"\n", wb_addr);
+                    }
+                }
+
+                ++num_of_reqs;
+                ++cycles;
+            }
+
+            double hit_rate = (double)hits / ((double)hits + (double)misses);
+            printf("%3lf%%\n", hit_rate * 100);
+            free(cache);
         }
-
-        ++num_of_reqs;
-        ++cycles;
-    }
-
-    double hit_rate = (double)hits / ((double)hits + (double)misses);
-    printf("Hit rate: %lf%%\n", hit_rate * 100);
+        printf("\n-----------------------------------------\n");
+    }    
+    
 }

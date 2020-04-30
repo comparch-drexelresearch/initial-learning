@@ -14,6 +14,18 @@
 
 #define LRU
 
+
+typedef struct CP_Config 
+{
+    unsigned block_size; // Size of a cache line (in Bytes), try 64
+    // TODO, you should try different size of cache, for example, 128KB, 256KB, 512KB, 1MB, 2MB
+    unsigned cache_size; // Size of a cache (in KB), initially 256
+    // TODO, you should try different association configurations, for example 4, 8, 16
+    unsigned assoc; // initially 4
+    char* cp_type;
+}CP_Config;
+
+
 /* Cache */
 typedef struct Set
 {
@@ -40,9 +52,9 @@ typedef struct Cache
 }Cache;
 
 // Function Definitions
-Cache *initCache();
-bool accessBlock(Cache *cache, Request *req, uint64_t access_time);
-bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_addr);
+Cache *initCache(CP_Config *config);
+bool accessBlock(Cache *cache, Request *req, uint64_t access_time, CP_Config *config);
+bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_addr, CP_Config *config);
 
 // Helper Function
 uint64_t blkAlign(uint64_t addr, uint64_t mask);
@@ -50,5 +62,5 @@ Cache_Block *findBlock(Cache *cache, uint64_t addr);
 
 // Replacement Policies
 bool lru(Cache *cache, uint64_t addr, Cache_Block **victim_blk, uint64_t *wb_addr);
-
+bool lfu(Cache *cache, uint64_t addr, Cache_Block **victim_blk, uint64_t *wb_addr);
 #endif
