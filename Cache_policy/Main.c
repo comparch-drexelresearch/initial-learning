@@ -5,8 +5,8 @@ extern TraceParser *initTraceParser(const char * mem_file);
 extern bool getRequest(TraceParser *mem_trace);
 
 extern Cache* initCache(CP_Config *config);
-extern bool accessBlock(Cache *cache, Request *req, uint64_t access_time, CP_Config *config);
-extern bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_addr, CP_Config *config);
+extern bool accessBlock(Cache *cache, Request *req, uint64_t access_time);
+extern bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_addr, CP_Config* config);
 
 typedef struct CP_TABLE {
     int row;
@@ -39,39 +39,49 @@ int main(int argc, const char *argv[])
     };
 
     CP_TABLE *lru_table = malloc(sizeof(CP_TABLE));
-    lru_table->row = 30;
+    lru_table->row = 25;
     lru_table->name = "LRU";
     unsigned bst_arr[] = {
                         64, 64, 64, 64, 64, 
                         64, 64, 64, 64, 64, 
                         64, 64, 64, 64, 64,  
                         64, 64, 64, 64, 64,
-                        64, 64, 64, 64, 64,  
-                        64, 64, 64, 64, 64};
+                        64, 64, 64, 64, 64};  
+                        // 64, 64, 64, 64, 64};
                         
     unsigned cs_arr[] = {
                         128, 128, 128, 128, 128, 
                         256, 256, 256, 256, 256, 
                         512, 512, 512, 512, 512,
                         1024, 1024, 1024, 1024, 1024,
-                        2048, 2048, 2048, 2048, 2048,
-                        4096, 4096, 4096, 4096, 4096 };
+                        2048, 2048, 2048, 2048, 2048};
+                        // 4096, 4096, 4096, 4096, 4096 };
 
     unsigned assoc_arr[]  = {
                             2, 4, 8, 16, 32,
                             2, 4, 8, 16, 32,
                             2, 4, 8, 16, 32,
                             2, 4, 8, 16, 32,
-                            2, 4, 8, 16, 32,
-                            2, 4, 8, 16, 32 };
+                            2, 4, 8, 16, 32};
+                            // 2, 4, 8, 16, 32 };
 
     lru_table->block_size = bst_arr;
     lru_table->assoc = assoc_arr;
     lru_table->cache_size = cs_arr;
 
-    CP_TABLE *cp_tables[] = {lru_table};
+
+    CP_TABLE *lfu_table = malloc(sizeof(CP_TABLE));
+    lfu_table->row = 25;
+    lfu_table->name = "LFU";
+ 
+    lfu_table->block_size = bst_arr;
+    lfu_table->assoc = assoc_arr;
+    lfu_table->cache_size = cs_arr;
+    
+    
+    CP_TABLE *cp_tables[] = {lru_table, lfu_table};
     int num_tables =(int) ( sizeof(cp_tables) / sizeof(cp_tables[0]));
-    printf("Trace file used: %s\n\n", argv[1]);
+    printf("\nTrace file used: %s\n\n", argv[1]);
 
     for (int t = 0; t < num_tables; t++) {
         config.cp_type = cp_tables[t]->name;
@@ -81,7 +91,13 @@ int main(int argc, const char *argv[])
                 config.assoc = cp_tables[t]->assoc[r];
                 config.cache_size = cp_tables[t]->cache_size[r];
                 printf("%s, %u, %3u, %5u, ", config.cp_type, config.block_size, config.assoc, config.cache_size);
+            } else if (!strcmp(cp_tables[t]->name, "LFU")) {
+                config.block_size = cp_tables[t]->block_size[r];
+                config.assoc = cp_tables[t]->assoc[r];
+                config.cache_size = cp_tables[t]->cache_size[r];
+                printf("%s, %u, %3u, %5u, ", config.cp_type, config.block_size, config.assoc, config.cache_size);
             }
+
             // Initialize a CPU trace parser
             TraceParser *mem_trace = initTraceParser(argv[1]);
 
@@ -98,7 +114,7 @@ int main(int argc, const char *argv[])
             while (getRequest(mem_trace))
             {
                 // Step one, accessBlock()
-                if (accessBlock(cache, mem_trace->cur_req, cycles, &config))
+                if (accessBlock(cache, mem_trace->cur_req, cycles))
                 {
                     // Cache hit
                     hits++;

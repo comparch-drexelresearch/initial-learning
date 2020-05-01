@@ -53,8 +53,8 @@ typedef struct Cache
 
 // Function Definitions
 Cache *initCache(CP_Config *config);
-bool accessBlock(Cache *cache, Request *req, uint64_t access_time, CP_Config *config);
-bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_addr, CP_Config *config);
+bool accessBlock(Cache *cache, Request *req, uint64_t access_time);
+bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_addr, CP_Config * config);
 
 // Helper Function
 uint64_t blkAlign(uint64_t addr, uint64_t mask);
