@@ -15,6 +15,8 @@ typedef struct CP_TABLE {
     unsigned* cache_size; // Size of a cache (in KB), initially 256
     // TODO, you should try different association configurations, for example 4, 8, 16
     unsigned* assoc; // initially 4
+    unsigned * SHCT_size;
+    unsigned * sat_counter_bits;
     char* name;
  }CP_TABLE;
 
@@ -35,6 +37,8 @@ int main(int argc, const char *argv[])
         .cache_size = 256, // Size of a cache (in KB), initially 256
     // TODO, you should try different association configurations, for example 4, 8, 16
         .assoc = 4, // initially 4
+        .SHCT_size = 16384,
+        .sat_counter_bits = 3,
         .cp_type = "",
     };
 
@@ -64,6 +68,18 @@ int main(int argc, const char *argv[])
                             2, 4, 8, 16, 32,
                             2, 4, 8, 16, 32};
                             // 2, 4, 8, 16, 32 };
+    unsigned SHCT_size_arr[] = {
+                            16384, 16384, 16384, 16384, 16384,
+                            16384, 16384, 16384, 16384, 16384,
+                            16384, 16384, 16384, 16384, 16384,
+                            16384, 16384, 16384, 16384, 16384,
+                            16384, 16384, 16384, 16384, 16384};
+    unsigned sat_counter_bits_arr[] = {
+                            3, 3, 3, 3, 3,
+                            3, 3, 3, 3, 3,
+                            3, 3, 3, 3, 3,
+                            3, 3, 3, 3, 3,
+                            3, 3, 3, 3, 3};
 
     lru_table->block_size = bst_arr;
     lru_table->assoc = assoc_arr;
@@ -78,23 +94,42 @@ int main(int argc, const char *argv[])
     lfu_table->assoc = assoc_arr;
     lfu_table->cache_size = cs_arr;
     
+    CP_TABLE *lru_ship_table = malloc(sizeof(CP_TABLE));
+    lru_ship_table->row = 25;
+    lru_ship_table->name = "LRU_SHiP";
+    lru_ship_table->block_size = bst_arr;
+    lru_ship_table->assoc = assoc_arr;
+    lru_ship_table->cache_size = cs_arr;
+    lru_ship_table->SHCT_size = SHCT_size_arr;
+    lru_ship_table->sat_counter_bits = sat_counter_bits_arr;
+
+    CP_TABLE *srrip_ship_table = malloc(sizeof(CP_TABLE));
+    srrip_ship_table->row = 25;
+    srrip_ship_table->name = "SRRIP_SHiP";
+    srrip_ship_table->block_size = bst_arr;
+    srrip_ship_table->assoc = assoc_arr;
+    srrip_ship_table->cache_size = cs_arr;
+    srrip_ship_table->SHCT_size = SHCT_size_arr;
+    srrip_ship_table->sat_counter_bits = sat_counter_bits_arr;
     
-    CP_TABLE *cp_tables[] = {lru_table, lfu_table};
+    CP_TABLE *cp_tables[] = {lru_ship_table, srrip_ship_table};
     int num_tables =(int) ( sizeof(cp_tables) / sizeof(cp_tables[0]));
     printf("\nTrace file used: %s\n\n", argv[1]);
 
     for (int t = 0; t < num_tables; t++) {
         config.cp_type = cp_tables[t]->name;
         for( int r = 0; r < cp_tables[t]->row; r++) {
-            if (!strcmp(cp_tables[t]->name, "LRU")) {
+            if ((!strcmp(cp_tables[t]->name, "LRU")) || (!strcmp(cp_tables[t]->name, "LFU"))) {
                 config.block_size = cp_tables[t]->block_size[r];
                 config.assoc = cp_tables[t]->assoc[r];
                 config.cache_size = cp_tables[t]->cache_size[r];
                 printf("%s, %u, %3u, %5u, ", config.cp_type, config.block_size, config.assoc, config.cache_size);
-            } else if (!strcmp(cp_tables[t]->name, "LFU")) {
+            } else if ((!strcmp(cp_tables[t]->name, "LRU_SHiP")) || (!strcmp(cp_tables[t]->name, "SRRIP_SHiP"))) {
                 config.block_size = cp_tables[t]->block_size[r];
                 config.assoc = cp_tables[t]->assoc[r];
                 config.cache_size = cp_tables[t]->cache_size[r];
+                config.SHCT_size = cp_tables[t]->SHCT_size[r];
+                config.sat_counter_bits = cp_tables[t]->sat_counter_bits[r];
                 printf("%s, %u, %3u, %5u, ", config.cp_type, config.block_size, config.assoc, config.cache_size);
             }
 
@@ -103,7 +138,8 @@ int main(int argc, const char *argv[])
 
             // Initialize a Cache
             Cache *cache = initCache(&config);
-            
+            //printf("Done init\n");
+
             // Running the trace
             uint64_t num_of_reqs = 0;
             uint64_t hits = 0;
@@ -124,12 +160,12 @@ int main(int argc, const char *argv[])
                     // Cache miss!
                     misses++;
                     // Step two, insertBlock()
-                    //  printf("Inserting: %"PRIu64"\n", mem_trace->cur_req->load_or_store_addr);
+                    //printf("Inserting: %"PRIu64"\n", mem_trace->cur_req->load_or_store_addr);
                     uint64_t wb_addr;
                     if (insertBlock(cache, mem_trace->cur_req, cycles, &wb_addr, &config))
                     {
                         num_evicts++;
-                    //printf("Evicted: %"PRIu64"\n", wb_addr);
+                        //printf("Evicted: %"PRIu64"\n", wb_addr);
                     }
                 }
 
@@ -139,9 +175,15 @@ int main(int argc, const char *argv[])
 
             double hit_rate = (double)hits / ((double)hits + (double)misses);
             printf("%3lf%%\n", hit_rate * 100);
+            free(cache->blocks);
+            free(cache->sets);
             free(cache);
         }
         printf("\n-----------------------------------------\n");
-    }    
+    }
+    free(lru_table);
+    free(lfu_table);
+    free(srrip_ship_table);
+    free(lru_ship_table);    
     
 }

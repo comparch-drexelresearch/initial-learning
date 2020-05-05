@@ -12,6 +12,7 @@ typedef struct Cache_Block
 
     bool valid; // Is this block valid?
     bool dirty; // Has this block been modified?
+    bool outcome; // Was this block re-reference?
 
     uint64_t when_touched; // The last time this block is referenced.
     uint64_t frequency; // How many times this block is referenced.
@@ -22,6 +23,10 @@ typedef struct Cache_Block
     // Advanced Features
     uint64_t PC; // Which instruction that brings in this block?
     int core_id; // Which core the instruction is running on.
+    unsigned signature;
+    uint8_t prediction;
+    uint8_t RRPV;
+
 }Cache_Block;
 
 #endif

@@ -22,9 +22,25 @@ typedef struct CP_Config
     unsigned cache_size; // Size of a cache (in KB), initially 256
     // TODO, you should try different association configurations, for example 4, 8, 16
     unsigned assoc; // initially 4
+    unsigned SHCT_size;
+    unsigned sat_counter_bits;
     char* cp_type;
 }CP_Config;
 
+
+// saturating counter
+typedef struct Sat_Counter
+{
+    unsigned counter_bits;
+    uint8_t max_val;
+    uint8_t counter;
+}Sat_Counter;
+
+typedef struct SHiP
+{
+    Sat_Counter *local_counters;
+    
+}SHiP;
 
 /* Cache */
 typedef struct Set
@@ -48,6 +64,8 @@ typedef struct Cache
     unsigned tag_shift; // To extract tag
 
     Set *sets; // All the sets of a cache
+    Sat_Counter *SHCT; //Signature history counter table 
+    unsigned SHCT_mask; 
     
 }Cache;
 
@@ -59,8 +77,16 @@ bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_
 // Helper Function
 uint64_t blkAlign(uint64_t addr, uint64_t mask);
 Cache_Block *findBlock(Cache *cache, uint64_t addr);
+void initSatCounter(Sat_Counter *sat_counter, unsigned counter_bits);
+void incrementCounter(Sat_Counter *sat_counter);
+void decrementCounter(Sat_Counter *sat_counter);
+unsigned getSignature(uint64_t branch_addr, unsigned index_mask);
+int checkPowerofTwo(unsigned x);
 
 // Replacement Policies
 bool lru(Cache *cache, uint64_t addr, Cache_Block **victim_blk, uint64_t *wb_addr);
 bool lfu(Cache *cache, uint64_t addr, Cache_Block **victim_blk, uint64_t *wb_addr);
+bool lru_ship(Cache *cache, uint64_t addr, Cache_Block **victim_blk, uint64_t *wb_addr);
+bool srrip_ship(Cache *cache, uint64_t addr, Cache_Block **victim_blk, uint64_t *wb_addr); 
+
 #endif
