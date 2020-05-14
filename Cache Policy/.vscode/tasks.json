@@ -1,0 +1,26 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "gcc build active file",
+			"command": "/usr/bin/gcc",
+			"args": [
+				"-g",
+				"${fileDirname}/Main.c",
+				"${fileDirname}/Trace.c",
+				"${fileDirname}/Cache.c",
+				"-o",
+				"${fileDirname}/${fileBasenameNoExtension}",
+				"-lm"
+			],
+			"options": {
+				"cwd": "/usr/bin"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		}
+	]
+}
