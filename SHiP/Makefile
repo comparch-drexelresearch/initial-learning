@@ -1,4 +1,4 @@
-SOURCE	:= Main.c Trace.c Cache.c
+SOURCE	:= Main.c Trace.c Cache.c SHCT.c
 CC	:= gcc
 TARGET	:= Main
 LINK	:= -lm

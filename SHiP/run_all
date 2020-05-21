@@ -1,9 +1,8 @@
 #!/bin/bash
 
 ./Main 531.deepsjeng_r_llc.mem_trace LRU >> performance
+echo "-------------------" >> performance
 ./Main 541.leela_r_llc.mem_trace LRU >> performance
+echo "-------------------" >> performance
 ./Main 548.exchange2_r_llc.mem_trace LRU >> performance
-
-./Main 531.deepsjeng_r_llc.mem_trace LFU >> performance
-./Main 541.leela_r_llc.mem_trace LFU >> performance
-./Main 548.exchange2_r_llc.mem_trace LFU >> performance
+echo "_________________________________" >> performance

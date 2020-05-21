@@ -1,12 +1,18 @@
 #include "Trace.h"
 #include "Cache.h"
+#include "SHCT.h"
 
 extern TraceParser *initTraceParser(const char * mem_file);
 extern bool getRequest(TraceParser *mem_trace);
 
 extern Cache* initCache();
-extern bool accessBlock(Cache *cache, Request *req, uint64_t access_time);
-extern bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_addr);
+extern SHCT *init_SHCT(unsigned table_size, unsigned counter_bits);
+extern bool accessBlock(Cache *cache, Request *req, uint64_t access_time, SHCT *signature_table);
+extern bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_addr, SHCT *signature_table);
+
+extern void initSatCounter(Sat_Counter *sat_counter, unsigned counter_bits);
+extern void incrementCounter(Sat_Counter *sat_counter);
+extern void decrementCounter(Sat_Counter *sat_counter);
 
 int main(int argc, char *argv[])
 {	
@@ -19,7 +25,7 @@ int main(int argc, char *argv[])
 
     int i, j;
     unsigned cache_size[] = {128, 256, 512, 1024, 2048};
-    unsigned assoc[] = {4, 8, 16};
+    unsigned assoc[] = {4, 8, 16, 32};
 
     int num_row = (int) (sizeof(cache_size)/sizeof(cache_size[0]));
     int num_col = (int) (sizeof(assoc)/sizeof(assoc[0]));
@@ -33,6 +39,9 @@ int main(int argc, char *argv[])
 
             // Initialize a Cache
             Cache *cache = initCache(cache_size[i], assoc[j], policy);
+
+            // Initialize an SHCT
+            SHCT *signature_table = init_SHCT(16384, 3);
             
             // Running the trace
             uint64_t num_of_reqs = 0;
@@ -44,7 +53,7 @@ int main(int argc, char *argv[])
             while (getRequest(mem_trace))
             {
                 // Step one, accessBlock()
-                if (accessBlock(cache, mem_trace->cur_req, cycles))
+                if (accessBlock(cache, mem_trace->cur_req, cycles, signature_table))
                 {
                     // Cache hit
                     hits++;
@@ -56,7 +65,7 @@ int main(int argc, char *argv[])
                     // Step two, insertBlock()
         //            printf("Inserting: %"PRIu64"\n", mem_trace->cur_req->load_or_store_addr);
                     uint64_t wb_addr;
-                    if (insertBlock(cache, mem_trace->cur_req, cycles, &wb_addr))
+                    if (insertBlock(cache, mem_trace->cur_req, cycles, &wb_addr, signature_table))
                     {
                         num_evicts++;
         //                printf("Evicted: %"PRIu64"\n", wb_addr);

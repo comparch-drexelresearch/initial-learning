@@ -28,8 +28,10 @@ Cache *initCache(unsigned cache_size, unsigned assoc, char *policy)
         cache->blocks[i].tag = UINTMAX_MAX; 
         cache->blocks[i].valid = false;
         cache->blocks[i].dirty = false;
+        cache->blocks[i].outcome = false;
         cache->blocks[i].when_touched = 0;
         cache->blocks[i].frequency = 0;
+        cache->blocks[i].prediction = 0;
     }
 
     // Initialize Set-way variables
@@ -74,7 +76,7 @@ Cache *initCache(unsigned cache_size, unsigned assoc, char *policy)
     return cache;
 }
 
-bool accessBlock(Cache *cache, Request *req, uint64_t access_time)
+bool accessBlock(Cache *cache, Request *req, uint64_t access_time, SHCT *signature_table)
 {
     bool hit = false;
 
@@ -90,6 +92,11 @@ bool accessBlock(Cache *cache, Request *req, uint64_t access_time)
         blk->when_touched = access_time;
         // Increment frequency counter
         ++blk->frequency;
+        // Update reference status
+        blk->outcome = true;
+
+        unsigned blk_index = blk->PC & signature_table->signature_table_mask;
+        incrementCounter(&(signature_table->counters[blk_index]));
 
         if (req->req_type == STORE)
         {
@@ -100,7 +107,7 @@ bool accessBlock(Cache *cache, Request *req, uint64_t access_time)
     return hit;
 }
 
-bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_addr)
+bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_addr, SHCT *signature_table)
 {
     // Step one, find a victim block
     uint64_t blk_aligned_addr = blkAlign(req->load_or_store_addr, cache->blk_mask);
@@ -108,19 +115,27 @@ bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_
     bool wb_required = false;
     Cache_Block *victim = NULL;
     if (!strcmp(cache->policy, "LRU")) {
-        wb_required = lru(cache, blk_aligned_addr, &victim, wb_addr);
+        wb_required = lru(cache, blk_aligned_addr, &victim, wb_addr, signature_table);
     }
     else if (!strcmp(cache->policy, "LFU")) {
         wb_required = lfu(cache, blk_aligned_addr, &victim, wb_addr);
     }
     assert(victim != NULL);
 
+    unsigned victim_index = victim->PC & signature_table->signature_table_mask;
+
+    if (victim->outcome != true) {
+        decrementCounter(&(signature_table->counters[victim_index]));
+    }
+
     // Step two, insert the new block
     uint64_t tag = req->load_or_store_addr >> cache->tag_shift;
     victim->tag = tag;
     victim->valid = true;
+    victim->outcome = false;
 
     victim->when_touched = access_time;
+    victim->PC = access_time;
     ++victim->frequency;
 
     if (req->req_type == STORE)
@@ -163,7 +178,7 @@ Cache_Block *findBlock(Cache *cache, uint64_t addr)
     return NULL;
 }
 
-bool lru(Cache *cache, uint64_t addr, Cache_Block **victim_blk, uint64_t *wb_addr)
+bool lru(Cache *cache, uint64_t addr, Cache_Block **victim_blk, uint64_t *wb_addr, SHCT *signature_table)
 {
     uint64_t set_idx = (addr >> cache->set_shift) & cache->set_mask;
     //    printf("Set: %"PRIu64"\n", set_idx);
@@ -184,9 +199,12 @@ bool lru(Cache *cache, uint64_t addr, Cache_Block **victim_blk, uint64_t *wb_add
     Cache_Block *victim = ways[0];
     for (i = 1; i < cache->num_ways; i++)
     {
-        if (ways[i]->when_touched < victim->when_touched)
-        {
-            victim = ways[i];
+        unsigned victim_idx = victim->PC & signature_table->signature_table_mask;
+        unsigned blk_idx = ways[i]->PC & signature_table->signature_table_mask;
+        if (signature_table->counters[blk_idx].counter <= signature_table->counters[victim_idx].counter) {
+            if (ways[i]->when_touched < victim->when_touched) {
+                victim = ways[i];
+            }
         }
     }
 

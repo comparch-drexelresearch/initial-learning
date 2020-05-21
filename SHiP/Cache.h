@@ -12,8 +12,8 @@
 
 #include "Cache_Blk.h"
 #include "Request.h"
+#include "SHCT.h"
 
-#define LRU
 
 /* Cache */
 typedef struct Set
@@ -44,14 +44,14 @@ typedef struct Cache
 
 // Function Definitions
 Cache *initCache(unsigned cache_size, unsigned assoc, char *policy);
-bool accessBlock(Cache *cache, Request *req, uint64_t access_time);
-bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_addr);
+bool accessBlock(Cache *cache, Request *req, uint64_t access_time, SHCT *signature_table);
+bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_addr, SHCT *signature_table);
 
 // Helper Function
 uint64_t blkAlign(uint64_t addr, uint64_t mask);
 Cache_Block *findBlock(Cache *cache, uint64_t addr);
 
 // Replacement Policies
-bool lru(Cache *cache, uint64_t addr, Cache_Block **victim_blk, uint64_t *wb_addr);
+bool lru(Cache *cache, uint64_t addr, Cache_Block **victim_blk, uint64_t *wb_addr, SHCT *signature_table);
 bool lfu(Cache *cache, uint64_t addr, Cache_Block **victim_blk, uint64_t *wb_addr);
 #endif
